@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Observatorio de la Trata en Argentina</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700;900&family=Source+Sans+Pro:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" onerror="if(!window.L){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';s.onerror=function(){if(!window.L){var s2=document.createElement('script');s2.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';document.head.appendChild(s2);}};document.head.appendChild(s);}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" onerror="if(!window.Chart){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';s.onerror=function(){if(!window.Chart){var s2=document.createElement('script');s2.src='https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js';document.head.appendChild(s2);}};document.head.appendChild(s);}"></script>
+<script>
+window.addEventListener('load', function(){
+  if(!window.Chart || !window.L){
+    var msg = document.createElement('div');
+    msg.style.cssText='position:sticky;top:0;z-index:9999;background:#fff3cd;color:#664d03;border-bottom:1px solid #ffecb5;padding:12px 16px;font:600 14px/1.4 sans-serif';
+    msg.textContent='No se pudieron cargar algunas librerías externas. Los gráficos y mapas necesitan conexión a internet o abrir el archivo desde un servidor web.';
+    document.body.prepend(msg);
+  }
+});
+</script>
+<style>
+:root{
+  --az:#003B79;--azm:#0072BB;--cel:#74ACDF;--celc:#B8D9F0;--celx:#E8F4FD;
+  --gbg:#F0F3F6;--gbr:#D0DBE8;--tx:#1A2B3C;--txs:#567899;
+  --ro:#C0392B;--na:#E07B39;--ve:#17704A;--am:#C49A10;--mo:#6C3483;
+  --sh:0 4px 24px rgba(0,59,121,.10);--shl:0 8px 36px rgba(0,59,121,.18);
+  --r:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Sans Pro',sans-serif;background:linear-gradient(180deg,#031833 0%,#072a4f 38%,#0a3968 100%);color:var(--tx);overflow-x:hidden;position:relative}
+#page-bg-canvas{position:fixed;inset:0;width:100vw;height:100vh;z-index:-3;pointer-events:none;opacity:.92}
+.page-bg-overlay{position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(circle at 18% 12%,rgba(116,172,223,.12),transparent 26%),radial-gradient(circle at 78% 22%,rgba(116,172,223,.10),transparent 24%),linear-gradient(180deg,rgba(2,20,42,.22) 0%,rgba(3,31,59,.16) 42%,rgba(5,48,87,.18) 100%)}
+
+/* HEADER */
+.htop{background:var(--az);padding:8px 28px;display:flex;align-items:center;gap:14px}
+.htop .esc{width:34px;height:34px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.htop .gt{color:#fff;font-family:Raleway,sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.8px}
+.htop .gt span{display:block;font-size:10px;font-weight:300;opacity:.7;letter-spacing:1.5px;text-transform:uppercase}
+
+/* HERO */
+.hero{position:relative;height:320px;overflow:hidden;background:#060d1a}
+#hero-canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,30,70,.82) 0%,rgba(0,55,115,.55) 50%,rgba(0,80,150,.38) 100%)}
+.hero-content{position:relative;z-index:10;max-width:1200px;margin:0 auto;padding:46px 28px 0;display:flex;align-items:flex-start;gap:28px}
+.hero-stripe{width:7px;height:90px;border-radius:4px;flex-shrink:0;background:linear-gradient(to bottom,var(--cel) 33%,#fff 33%,#fff 66%,var(--cel) 66%)}
+.hero-txt h1{font-family:Raleway,sans-serif;font-size:clamp(20px,3.2vw,36px);font-weight:900;color:#fff;line-height:1.18;text-shadow:0 2px 16px rgba(0,0,0,.5)}
+.hero-txt h1 em{color:var(--cel);font-style:normal}
+.hero-txt p{margin-top:9px;color:rgba(255,255,255,.78);font-size:14px;max-width:600px;line-height:1.65;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.hero-badges{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.badge{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:10.5px;padding:3px 11px;border-radius:20px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.hero-kpis{position:absolute;bottom:0;left:0;right:0;z-index:10;display:flex}
+.hkpi{flex:1;background:rgba(0,59,121,.72);backdrop-filter:blur(8px);padding:9px 14px;border-top:3px solid rgba(116,172,223,.45);text-align:center}
+.hkpi-v{font-family:Raleway,sans-serif;font-size:20px;font-weight:900;color:#fff}
+.hkpi-l{font-size:9.5px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.5px}
+
+/* NAV */
+.nav-tabs{background:#fff;border-bottom:2px solid var(--gbr);position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.nav-inner{max-width:1200px;margin:0 auto;display:flex;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.nav-inner::-webkit-scrollbar{display:none}
+.ntab{padding:13px 16px;font-family:Raleway,sans-serif;font-size:12px;font-weight:700;color:var(--txs);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;text-transform:uppercase;letter-spacing:.4px;background:none;border-top:none;border-left:none;border-right:none;margin-bottom:-2px}
+.ntab:hover{color:var(--azm)}
+.ntab.active{color:var(--az);border-bottom-color:var(--cel)}
+
+/* MAIN */
+.main{max-width:1200px;margin:0 auto;padding:26px 14px 60px;position:relative;z-index:1}
+.sec{display:none;animation:fi .35s ease}
+.sec.active{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* SECTION TITLES */
+.stitle{font-family:Raleway,sans-serif;font-size:20px;font-weight:800;color:var(--az);margin-bottom:4px;display:flex;align-items:center;gap:9px}
+.stitle::before{content:'';width:5px;height:26px;background:linear-gradient(to bottom,var(--cel),var(--az));border-radius:3px;flex-shrink:0}
+.ssub{color:var(--txs);font-size:13px;margin-bottom:24px;padding-left:14px}
+
+/* MAP SECTION LABEL */
+.map-section-label{font-family:Raleway,sans-serif;font-size:14px;font-weight:800;color:var(--az);
+  margin:28px 0 6px;display:flex;align-items:center;gap:8px}
+.map-section-label::after{content:'';flex:1;height:1px;background:var(--gbr)}
+.map-section-sublabel{font-size:12px;color:var(--txs);margin-bottom:12px;padding-left:4px}
+
+/* KPI */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:13px;margin-bottom:28px}
+.kcard{background:#fff;border-radius:var(--r);padding:17px;box-shadow:var(--sh);border-top:4px solid var(--cel);position:relative;overflow:hidden;transition:all .25s;cursor:default}
+.kcard:hover{transform:translateY(-3px);box-shadow:var(--shl)}
+.kcard::after{content:'';position:absolute;bottom:-18px;right:-18px;width:70px;height:70px;border-radius:50%;background:var(--celx)}
+.kcard.ro{border-top-color:var(--ro)}.kcard.na{border-top-color:var(--na)}
+.kcard.ve{border-top-color:var(--ve)}.kcard.mo{border-top-color:var(--mo)}.kcard.am{border-top-color:var(--am)}
+.ki{font-size:21px;margin-bottom:5px}
+.kv{font-family:Raleway,sans-serif;font-size:28px;font-weight:900;color:var(--az);line-height:1}
+.kcard.ro .kv{color:var(--ro)}.kcard.na .kv{color:var(--na)}.kcard.ve .kv{color:var(--ve)}.kcard.mo .kv{color:var(--mo)}.kcard.am .kv{color:var(--am)}
+.kl{margin-top:5px;font-size:11px;font-weight:700;color:var(--txs);text-transform:uppercase;letter-spacing:.4px;position:relative;z-index:1}
+.ksrc{margin-top:3px;font-size:10px;color:#bbb;font-style:italic}
+
+/* CARDS */
+.cgrid{display:grid;gap:16px;margin-bottom:20px}
+.cgrid.c2{grid-template-columns:1fr 1fr}
+.cgrid.c3{grid-template-columns:1fr 1fr 1fr}
+.cgrid.c12{grid-template-columns:1fr 2fr}
+.cgrid.c21{grid-template-columns:2fr 1fr}
+.card{background:#fff;border-radius:var(--r);padding:20px;box-shadow:var(--sh);overflow:hidden}
+.ctit{font-family:Raleway,sans-serif;font-size:14px;font-weight:800;color:var(--az);margin-bottom:3px}
+.csub{font-size:11.5px;color:var(--txs);margin-bottom:14px}
+.cwrap canvas{max-height:280px}
+
+/* LEAFLET MAP CONTAINER */
+.map-block{border-radius:12px;overflow:hidden;box-shadow:var(--sh);position:relative;margin-bottom:20px}
+.lmap{width:100%;border-radius:12px}
+
+/* MAP OVERLAY LABEL */
+.mol{position:absolute;top:12px;left:12px;z-index:900;background:rgba(0,59,121,.65);
+  backdrop-filter:blur(8px);color:#fff;font-family:Raleway,sans-serif;font-size:13px;font-weight:700;
+  padding:6px 14px;border-radius:7px;border:1px solid rgba(116,172,223,.35);pointer-events:none}
+
+/* MAP LEGEND */
+.mleg{position:absolute;bottom:14px;right:14px;z-index:900;background:rgba(255,255,255,.93);
+  backdrop-filter:blur(8px);border-radius:9px;padding:10px 14px;font-size:11.5px;
+  box-shadow:0 2px 16px rgba(0,0,0,.15);min-width:150px}
+.mleg-t{font-family:Raleway,sans-serif;font-weight:800;color:var(--az);font-size:11px;
+  margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px}
+.mleg-r{display:flex;align-items:center;gap:7px;margin-bottom:5px;color:var(--tx);font-size:11.5px}
+
+/* ROUTE LEGEND */
+.rleg{display:flex;gap:14px;flex-wrap:wrap;padding:10px 14px;background:#fff;
+  border-radius:8px;box-shadow:var(--sh);margin-bottom:14px}
+.rleg-i{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx);font-weight:600}
+.rleg-line{width:30px;height:4px;border-radius:2px}
+
+/* CORR TABLE */
+.ctable{width:100%;border-collapse:collapse;font-size:12.5px}
+.ctable th{background:var(--az);color:#fff;padding:9px 11px;font-family:Raleway,sans-serif;font-weight:700;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.ctable td{padding:7px 11px;border-bottom:1px solid var(--gbr)}
+.ctable tr:hover td{background:var(--celx)}
+.ctable .num{font-family:Raleway,sans-serif;font-weight:700;color:var(--azm)}
+.ctable .hi td{background:rgba(192,57,43,.06)}
+.ctable .me td{background:rgba(0,114,187,.05)}
+
+/* IBOX */
+.ibox{background:var(--celx);border-left:4px solid var(--cel);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.6}
+.ibox strong{color:var(--az)}
+
+/* INST GRID */
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;margin-top:14px}
+.icard{background:var(--celx);border-radius:8px;padding:11px 13px;border-left:4px solid var(--azm);font-size:12px}
+.icard-p{font-family:Raleway,sans-serif;font-weight:800;color:var(--az);font-size:12.5px;margin-bottom:3px}
+.icard-n{color:var(--txs);line-height:1.4}
+
+/* RISK BAR */
+.rbar-wrap{width:90px;height:10px;background:var(--gbr);border-radius:5px;overflow:hidden;display:inline-block;vertical-align:middle}
+.rbar{height:100%;border-radius:5px}
+
+@media(max-width:900px){
+  .cgrid.c2,.cgrid.c3,.cgrid.c12,.cgrid.c21{grid-template-columns:1fr}
+  .hero-kpis{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="page-bg-canvas" aria-hidden="true"></canvas>
+<div class="page-bg-overlay" aria-hidden="true"></div>
+
+<div class="htop">
+  <div class="esc">🇦🇷</div>
+  <div class="gt">Argentina.gob.ar <span>Ministerio de Justicia y Derechos Humanos · COMITÉ Ejecutivo Anti-Trata</span></div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-stripe"></div>
+    <div class="hero-txt">
+      <h1>Observatorio de la <em>Trata</em><br>en Argentina</h1>
+      <p>Plataforma integrada de visualización territorial sobre trata y explotación de personas. COMITÉ Ejecutivo · RENATRE · PROTEX · SISTRATA.</p>
+      <div class="hero-badges">
+        <span class="badge">2023–2025</span>
+        <span class="badge">24 Provincias</span>
+        <span class="badge">800+ Actas IELR</span>
+        <span class="badge">Ley 26.364 / 26.842</span>
+      </div>
+    </div>
+  </div>
+  <div class="hero-kpis">
+    <div class="hkpi"><div class="hkpi-v" data-count="19046">0</div><div class="hkpi-l">Denuncias 145</div></div>
+    <div class="hkpi"><div class="hkpi-v" data-count="3794">0</div><div class="hkpi-l">Investigaciones</div></div>
+    <div class="hkpi"><div class="hkpi-v" data-count="2621">0</div><div class="hkpi-l">Víctimas</div></div>
+    <div class="hkpi"><div class="hkpi-v" data-count="644">0</div><div class="hkpi-l">Sentencias</div></div>
+    <div class="hkpi"><div class="hkpi-v" data-count="978">0</div><div class="hkpi-l">Condenados</div></div>
+    <div class="hkpi"><div class="hkpi-v" data-count="800">0</div><div class="hkpi-l">Actas IELR</div></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav-tabs">
+  <div class="nav-inner">
+    <button class="ntab active"  onclick="showSec('resumen',this)">📊 Resumen</button>
+    <button class="ntab" onclick="showSec('mapas',this)">🗺️ Mapas Territoriales</button>
+    <button class="ntab" onclick="showSec('rutas',this)">🔴 Rutas de Trata</button>
+    <button class="ntab" onclick="showSec('denuncias',this)">📞 Denuncias</button>
+    <button class="ntab" onclick="showSec('victimas',this)">👥 Víctimas</button>
+    <button class="ntab" onclick="showSec('fuerzas',this)">🛡️ Fuerzas de Seguridad</button>
+    <button class="ntab" onclick="showSec('laboral',this)">🌾 Explot. Laboral Rural</button>
+    <button class="ntab" onclick="showSec('correlaciones',this)">🔗 Correlaciones</button>
+    <button class="ntab" onclick="showSec('institucional',this)">🏛️ Institucional</button>
+  </div>
+</nav>
+
+<div class="main">
+
+<!-- ══════════════ RESUMEN ══════════════ -->
+<div class="sec active" id="sec-resumen">
+  <div class="stitle">Resumen Nacional</div>
+  <div class="ssub">Indicadores clave · PROTEX · SISTRATA · RENATRE · COMITÉ 2023–2025</div>
+
+  <div class="kgrid">
+    <div class="kcard ro"><div class="ki">📞</div><div class="kv" data-count="19046">19.046</div><div class="kl">Denuncias Línea 145</div><div class="ksrc">PROTEX · Acumulado</div></div>
+    <div class="kcard na"><div class="ki">🔍</div><div class="kv" data-count="3794">3.794</div><div class="kl">Investigaciones</div><div class="ksrc">SISTRATA · 2023</div></div>
+    <div class="kcard mo"><div class="ki">👥</div><div class="kv" data-count="2621">2.621</div><div class="kl">Víctimas Reconocidas</div><div class="ksrc">Sentencias Federales</div></div>
+    <div class="kcard"><div class="ki">⚖️</div><div class="kv" data-count="644">644</div><div class="kl">Sentencias Definitivas</div><div class="ksrc">Justicia Federal</div></div>
+    <div class="kcard am"><div class="ki">🔒</div><div class="kv" data-count="978">978</div><div class="kl">Personas Condenadas</div><div class="ksrc">Justicia Federal</div></div>
+    <div class="kcard ve"><div class="ki">🚨</div><div class="kv" data-count="3536">3.536</div><div class="kl">Operaciones Seguridad</div><div class="ksrc">SISTRATA · 2023</div></div>
+    <div class="kcard"><div class="ki">🌾</div><div class="kv" data-count="800">800</div><div class="kl">Actas IELR RENATRE</div><div class="ksrc">RENATRE · 2024</div></div>
+    <div class="kcard ve"><div class="ki">🏛️</div><div class="kv">23</div><div class="kl">Provincias con Programa</div><div class="ksrc">COMITÉ · 2025</div></div>
+  </div>
+
+  <!-- MAPA RESUMEN: CORRELACIONES TERRITORIALES -->
+  <div class="map-section-label">🗺️ Mapa de Riesgo Territorial Integrado</div>
+  <div class="map-section-sublabel">Síntesis de actas IELR · tareas SISTRATA · cobertura institucional por provincia — burbujas proporcionales al índice de riesgo relativo</div>
+
+  <div class="map-block" style="height:440px">
+    <div class="mol">Índice de Riesgo Relativo por Provincia · tamaño = actas IELR + operaciones</div>
+    <div id="map-resumen" class="lmap" style="height:440px"></div>
+    <div class="mleg">
+      <div class="mleg-t">Riesgo Relativo</div>
+      <div class="mleg-r"><span style="width:22px;height:22px;border-radius:50%;background:rgba(192,57,43,.45);border:2px solid #C0392B;display:inline-block"></span>Muy Alto</div>
+      <div class="mleg-r"><span style="width:16px;height:16px;border-radius:50%;background:rgba(224,123,57,.45);border:2px solid #E07B39;display:inline-block"></span>Alto</div>
+      <div class="mleg-r"><span style="width:12px;height:12px;border-radius:50%;background:rgba(0,114,187,.45);border:2px solid #0072BB;display:inline-block"></span>Medio</div>
+      <div class="mleg-r"><span style="width:8px;height:8px;border-radius:50%;background:rgba(116,172,223,.45);border:2px solid #74ACDF;display:inline-block"></span>Bajo</div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #ddd">
+        <div class="mleg-r"><span style="width:12px;height:12px;border-radius:50%;background:#17704A;display:inline-block"></span>Con programa inst.</div>
+        <div class="mleg-r"><span style="width:12px;height:12px;border-radius:50%;background:#BDC3C7;display:inline-block"></span>Sin programa inst.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS RESUMEN -->
+  <div class="cgrid c2">
+    <div class="card">
+      <div class="ctit">Flujo del Sistema Anti-Trata</div>
+      <div class="csub">Denuncias → Investigaciones → Sentencias → Condenas</div>
+      <div class="cwrap"><canvas id="ch-funnel"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Denuncias por Tipo — Línea 145</div>
+      <div class="csub">Distribución porcentual por modalidad</div>
+      <div class="cwrap"><canvas id="ch-den-tipo"></canvas></div>
+    </div>
+  </div>
+  <div class="cgrid c3">
+    <div class="card">
+      <div class="ctit">Víctimas por Tipo</div>
+      <div class="csub">Sentencias federales</div>
+      <div class="cwrap"><canvas id="ch-vt-res"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Fuerzas de Seguridad</div>
+      <div class="csub">SISTRATA 2023</div>
+      <div class="cwrap"><canvas id="ch-fz-res"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Top Rubros Laborales</div>
+      <div class="csub">RENATRE 2024</div>
+      <div class="cwrap"><canvas id="ch-rub-res"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAPAS TERRITORIALES ══════════════ -->
+<div class="sec" id="sec-mapas">
+  <div class="stitle">Mapas Territoriales</div>
+  <div class="ssub">Visualización georreferenciada · todos los indicadores disponibles por provincia y localidad</div>
+
+  <!-- MAP 1 -->
+  <div class="map-section-label">1 · Indicios de Explotación Laboral Rural — Actas IELR por Provincia</div>
+  <div class="map-section-sublabel">Burbujas proporcionales a la cantidad de actas · RENATRE 2024 · 800 actas totales en 19 provincias</div>
+  <div class="map-block" style="height:480px">
+    <div class="mol">🌾 Actas IELR RENATRE 2024 — clic en burbuja para detalle</div>
+    <div id="map-ielr" class="lmap" style="height:480px"></div>
+    <div class="mleg">
+      <div class="mleg-t">Cantidad de Actas</div>
+      <div class="mleg-r"><span style="width:28px;height:28px;border-radius:50%;background:rgba(0,59,121,.35);border:2px solid #003B79;display:inline-block"></span>≥ 100</div>
+      <div class="mleg-r"><span style="width:20px;height:20px;border-radius:50%;background:rgba(0,114,187,.35);border:2px solid #0072BB;display:inline-block"></span>50–99</div>
+      <div class="mleg-r"><span style="width:14px;height:14px;border-radius:50%;background:rgba(116,172,223,.4);border:2px solid #74ACDF;display:inline-block"></span>10–49</div>
+      <div class="mleg-r"><span style="width:9px;height:9px;border-radius:50%;background:rgba(184,217,240,.6);border:2px solid #B8D9F0;display:inline-block"></span>&lt; 10</div>
+    </div>
+  </div>
+
+  <!-- MAP 2 -->
+  <div class="map-section-label">2 · Localidades con Mayor Concentración de Actas IELR</div>
+  <div class="map-section-sublabel">Nivel municipal · tamaño = cantidad de actas · color = tipo de actividad agropecuaria · RENATRE 2024</div>
+  <div class="map-block" style="height:480px">
+    <div class="mol">📍 Localidades RENATRE — nivel municipal · actividad detectada</div>
+    <div id="map-local" class="lmap" style="height:480px"></div>
+    <div class="mleg">
+      <div class="mleg-t">Actividad Agropecuaria</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#C0392B;display:inline-block"></span>Tambo / Avícola</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#E07B39;display:inline-block"></span>Hortícola / Frutilla</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#17704A;display:inline-block"></span>Ganadera / Forestal</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#6C3483;display:inline-block"></span>Papa / Desmonte</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#003B79;display:inline-block"></span>Vid / Olivar</div>
+    </div>
+  </div>
+
+  <!-- MAP 3 -->
+  <div class="map-section-label">3 · Operaciones de Fuerzas de Seguridad — SISTRATA 2023</div>
+  <div class="map-section-sublabel">Tamaño de burbuja = tareas realizadas · fondo oscuro para resaltar intensidad operativa por región</div>
+  <div class="map-block" style="height:480px">
+    <div class="mol">🛡️ Tareas SISTRATA por región · 3.536 tareas totales</div>
+    <div id="map-ops" class="lmap" style="height:480px"></div>
+    <div class="mleg">
+      <div class="mleg-t">Tareas SISTRATA</div>
+      <div class="mleg-r"><span style="width:26px;height:26px;border-radius:50%;background:rgba(192,57,43,.35);border:2px solid #C0392B;display:inline-block"></span>&gt; 1.000</div>
+      <div class="mleg-r"><span style="width:18px;height:18px;border-radius:50%;background:rgba(192,57,43,.3);border:2px solid #C0392B;display:inline-block"></span>300–1.000</div>
+      <div class="mleg-r"><span style="width:11px;height:11px;border-radius:50%;background:rgba(224,123,57,.35);border:2px solid #E07B39;display:inline-block"></span>&lt; 300</div>
+    </div>
+  </div>
+
+  <!-- MAP 4 -->
+  <div class="map-section-label">4 · Presencia Institucional Provincial — COMITÉ 2025</div>
+  <div class="map-section-sublabel">Programas activos de asistencia y denuncia · clic en marcador para ver el organismo responsable</div>
+  <div class="map-block" style="height:480px">
+    <div class="mol">🏛️ Organismos provinciales anti-trata · 23 programas activos</div>
+    <div id="map-inst" class="lmap" style="height:480px"></div>
+    <div class="mleg">
+      <div class="mleg-t">Tipo de Organismo</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#003B79;display:inline-block"></span>Prog. Específico Trata</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#17704A;display:inline-block"></span>DDHH Provincial</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#6C3483;display:inline-block"></span>Sec. Mujer / Género</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#E07B39;display:inline-block"></span>Desarrollo Social</div>
+    </div>
+  </div>
+
+  <!-- Charts de apoyo -->
+  <div class="cgrid c2">
+    <div class="card">
+      <div class="ctit">Actas IELR por Provincia — Ranking Completo</div>
+      <div class="csub">Todas las provincias con registro RENATRE 2024</div>
+      <div class="cwrap"><canvas id="ch-map-rank"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Tareas SISTRATA por Región y Tipo de Explotación</div>
+      <div class="csub">Distribución operativa 2023</div>
+      <div class="cwrap"><canvas id="ch-ops-tipo"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ RUTAS ══════════════ -->
+<div class="sec" id="sec-rutas">
+  <div class="stitle">Rutas y Circuitos de Trata</div>
+  <div class="ssub">Corredores documentados · investigaciones judiciales PROTEX · operativos SISTRATA · reportes COMITÉ</div>
+
+  <div class="ibox">
+    <strong>Metodología:</strong> Rutas elaboradas a partir de patrones geográficos identificados en causas judiciales federales, operativos de fuerzas de seguridad y reportes del COMITÉ Ejecutivo. El tamaño de los nodos refleja su intensidad como punto de origen, tránsito o destino.
+  </div>
+
+  <div class="rleg">
+    <div class="rleg-i"><div class="rleg-line" style="background:#C0392B"></div>Explotación Sexual</div>
+    <div class="rleg-i"><div class="rleg-line" style="background:#E07B39"></div>Explotación Laboral</div>
+    <div class="rleg-i"><div class="rleg-line" style="background:#6C3483"></div>Trata Internacional</div>
+    <div class="rleg-i"><div class="rleg-line" style="background:#003B79"></div>Ruta Mixta</div>
+    <div class="rleg-i"><div class="rleg-line" style="background:#74ACDF;border-top:3px dashed #74ACDF;height:0"></div>Ruta Secundaria</div>
+  </div>
+
+  <div class="map-section-label">Mapa de Corredores · Argentina y Región</div>
+  <div class="map-section-sublabel">Nodos: círculo grande = destino principal · medio = nodo intermediario · pequeño = origen o frontera</div>
+  <div class="map-block" style="height:600px">
+    <div class="mol">🔴 Rutas de trata interna e internacional documentadas</div>
+    <div id="map-rutas" class="lmap" style="height:600px"></div>
+  </div>
+
+  <div class="cgrid c2">
+    <div class="card">
+      <div class="ctit">Nodos por Rol en la Red</div>
+      <div class="csub">Clasificación de ciudades según función documentada</div>
+      <table class="ctable">
+        <thead><tr><th>Ciudad / Región</th><th>Rol Principal</th><th>Modalidad</th></tr></thead>
+        <tbody>
+          <tr><td><strong>CABA — Gran Buenos Aires</strong></td><td class="num">Destino Principal</td><td>Sexual / Laboral</td></tr>
+          <tr><td>Córdoba capital</td><td class="num">Nodo Intermediario</td><td>Sexual / Laboral</td></tr>
+          <tr><td>Rosario — Santa Fe</td><td class="num">Nodo Intermediario</td><td>Sexual</td></tr>
+          <tr><td>Salta / Jujuy</td><td class="num">Origen / Tránsito</td><td>Sexual · Internacional</td></tr>
+          <tr><td>Formosa / Posadas</td><td class="num">Entrada Internacional</td><td>Laboral / Sexual</td></tr>
+          <tr><td>Mendoza capital</td><td class="num">Nodo Regional</td><td>Laboral / Sexual</td></tr>
+          <tr><td>Tucumán capital</td><td class="num">Tránsito NOA</td><td>Sexual</td></tr>
+          <tr><td>La Quiaca / Clorinda</td><td class="num">Frontera</td><td>Internacional</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="ctit">Corredores Internacionales</div>
+      <div class="csub">Países de origen documentados en causas federales</div>
+      <div class="cwrap"><canvas id="ch-intern"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DENUNCIAS ══════════════ -->
+<div class="sec" id="sec-denuncias">
+  <div class="stitle">Denuncias e Investigaciones</div>
+  <div class="ssub">Línea 145 · SISTRATA · Justicia Federal</div>
+  <div class="cgrid c2">
+    <div class="card"><div class="ctit">Denuncias Línea 145 por Tipo</div><div class="csub">19.046 denuncias · distribución porcentual</div><div class="cwrap"><canvas id="ch-den2"></canvas></div></div>
+    <div class="card"><div class="ctit">Investigaciones por Tipo de Explotación</div><div class="csub">3.794 investigaciones SISTRATA 2023</div><div class="cwrap"><canvas id="ch-inv"></canvas></div></div>
+  </div>
+  <div class="cgrid c12">
+    <div class="card"><div class="ctit">Sentencias por Modalidad</div><div class="csub">644 sentencias definitivas</div><div class="cwrap"><canvas id="ch-smod"></canvas></div></div>
+    <div class="card"><div class="ctit">Agravantes en Condenas</div><div class="csub">Frecuencia de agravantes en 537 causas condenatorias</div><div class="cwrap"><canvas id="ch-agrav"></canvas></div></div>
+  </div>
+  <div class="cgrid c3">
+    <div class="card"><div class="ctit">Veredictos</div><div class="csub">644 sentencias federales</div><div class="cwrap"><canvas id="ch-vered"></canvas></div></div>
+    <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="font-family:Raleway;font-size:64px;font-weight:900;color:var(--ve)">83%</div>
+      <div style="font-size:13px;color:var(--txs);text-align:center">Tasa condenatoria<br>537 de 644 sentencias</div>
+    </div>
+    <div class="card"><div class="ctit">Eficiencia por Tipo</div><div class="csub">Investigados vs. denunciados</div><div class="cwrap"><canvas id="ch-efic"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ══════════════ VICTIMAS ══════════════ -->
+<div class="sec" id="sec-victimas">
+  <div class="stitle">Víctimas y Condenadas/os</div>
+  <div class="ssub">Personas reconocidas en sentencias federales · PROTEX</div>
+  <div class="kgrid" style="grid-template-columns:repeat(6,1fr)">
+    <div class="kcard mo"><div class="ki">👥</div><div class="kv" data-count="2621">2.621</div><div class="kl">Total Víctimas</div></div>
+    <div class="kcard ro"><div class="ki">♀️</div><div class="kv" data-count="1910">1.910</div><div class="kl">Femeninas</div></div>
+    <div class="kcard"><div class="ki">♂️</div><div class="kv" data-count="475">475</div><div class="kl">Masculinas</div></div>
+    <div class="kcard ve"><div class="ki">🇦🇷</div><div class="kv" data-count="988">988</div><div class="kl">Argentinas</div></div>
+    <div class="kcard na"><div class="ki">🌍</div><div class="kv" data-count="813">813</div><div class="kl">Extranjeras</div></div>
+    <div class="kcard am"><div class="ki">🔒</div><div class="kv" data-count="978">978</div><div class="kl">Condenadas/os</div></div>
+  </div>
+  <div class="cgrid c2">
+    <div class="card"><div class="ctit">Víctimas por Tipo de Explotación</div><div class="csub">Sexual: 67% · Laboral: 33%</div><div class="cwrap"><canvas id="ch-vt2"></canvas></div></div>
+    <div class="card"><div class="ctit">Víctimas por Género</div><div class="csub">73% femeninas</div><div class="cwrap"><canvas id="ch-vg"></canvas></div></div>
+  </div>
+  <div class="cgrid c2">
+    <div class="card"><div class="ctit">Condenados/as por Género</div><div class="csub">978 personas condenadas</div><div class="cwrap"><canvas id="ch-cg"></canvas></div></div>
+    <div class="card"><div class="ctit">Condenados/as por Nacionalidad</div><div class="csub">21% extranjeros/as</div><div class="cwrap"><canvas id="ch-cn"></canvas></div></div>
+  </div>
+  <div class="ibox"><strong>Perfil predominante de víctimas:</strong> El 72,9% son mujeres. El 37,6% son extranjeras (principalmente de Bolivia, Paraguay y naciones limítrofes). El 35,4% de personas condenadas son mujeres — evidencia participación femenina en redes de explotación. La tasa de víctimas extranjeras supera el 30% en explotación sexual, reforzando el componente transnacional del delito.</div>
+</div>
+
+<!-- ══════════════ FUERZAS ══════════════ -->
+<div class="sec" id="sec-fuerzas">
+  <div class="stitle">Fuerzas de Seguridad — SISTRATA 2023</div>
+  <div class="ssub">3.536 tareas de las fuerzas federales · Ministerio de Seguridad</div>
+  <div class="kgrid">
+    <div class="kcard ve"><div class="ki">🚨</div><div class="kv" data-count="3536">3.536</div><div class="kl">Tareas Totales</div></div>
+    <div class="kcard"><div class="ki">🪖</div><div class="kv" data-count="1643">1.643</div><div class="kl">PFA</div></div>
+    <div class="kcard"><div class="ki">🟢</div><div class="kv" data-count="1009">1.009</div><div class="kl">GNA — Gendarmería</div></div>
+    <div class="kcard"><div class="ki">✈️</div><div class="kv" data-count="394">394</div><div class="kl">PSA — Aeroportuaria</div></div>
+    <div class="kcard"><div class="ki">🚢</div><div class="kv" data-count="390">390</div><div class="kl">PNA — Prefectura</div></div>
+    <div class="kcard ro"><div class="ki">🔒</div><div class="kv" data-count="122">122</div><div class="kl">Imputados/as</div></div>
+  </div>
+  <div class="cgrid c2">
+    <div class="card"><div class="ctit">Por Fuerza</div><div class="csub">PFA concentra el 46%</div><div class="cwrap"><canvas id="ch-fd"></canvas></div></div>
+    <div class="card"><div class="ctit">Por Tipo de Explotación</div><div class="csub">Sexual: 57.8%</div><div class="cwrap"><canvas id="ch-ft"></canvas></div></div>
+  </div>
+  <div class="cgrid c2">
+    <div class="card"><div class="ctit">Distribución Territorial</div><div class="csub">Buenos Aires y CABA: 69%</div><div class="cwrap"><canvas id="ch-freg"></canvas></div></div>
+    <div class="card"><div class="ctit">Perfil de Imputadas/os</div><div class="csub">122 personas identificadas</div><div class="cwrap"><canvas id="ch-imp"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ══════════════ LABORAL ══════════════ -->
+<div class="sec" id="sec-laboral">
+  <div class="stitle">Explotación Laboral Rural — RENATRE 2024</div>
+  <div class="ssub">800 actas IELR · 19 provincias · Registro Nacional de Trabajadores y Empleadores Agrarios</div>
+  <div class="cgrid c21">
+    <div class="card">
+      <div class="ctit">Actas por Provincia (completo)</div>
+      <div class="csub">800 actas totales · todas las provincias con registro</div>
+      <div class="cwrap"><canvas id="ch-lab-prov"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Por Actividad Agropecuaria</div>
+      <div class="csub">Top 10 rubros con mayor cantidad de actas</div>
+      <div class="cwrap"><canvas id="ch-lab-rub"></canvas></div>
+    </div>
+  </div>
+  <div class="cgrid c2">
+    <div class="card">
+      <div class="ctit">Top 10 Localidades</div>
+      <div class="csub">Mayor concentración de actas IELR</div>
+      <div class="cwrap"><canvas id="ch-lab-local"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctit">Cruce Provincia × Actividad</div>
+      <div class="csub">Combinaciones con mayor concentración de actas</div>
+      <div class="cwrap"><canvas id="ch-lab-cruce"></canvas></div>
+    </div>
+  </div>
+  <div class="ibox"><strong>Patrones detectados:</strong> <strong>Córdoba</strong> lidera con 239 actas (30% del total), concentradas en tambo (123) y papa (74). <strong>Mendoza</strong> registra alta actividad en horticultura y viticultura. El corredor <strong>Santiago del Estero → Formosa</strong> muestra alta prevalencia en desmonte y extracción forestal. Las temporadas de cosecha intensifican el riesgo de explotación.</div>
+</div>
+
+<!-- ══════════════ CORRELACIONES ══════════════ -->
+<div class="sec" id="sec-correlaciones">
+  <div class="stitle">Análisis de Correlaciones Cruzadas</div>
+  <div class="ssub">Relaciones entre indicadores de diferentes fuentes · PROTEX · SISTRATA · RENATRE · COMITÉ</div>
+  <div class="ibox">Cruce de datos entre bases del sistema anti-trata para identificar patrones territoriales, brechas del sistema y correlaciones entre presencia institucional, denuncia, fiscalización e investigación.</div>
+
+  <div class="cgrid c2">
+    <div class="card"><div class="ctit">IELR vs. Operaciones SISTRATA</div><div class="csub">Relación entre actas RENATRE y tareas de seguridad por provincia</div><div class="cwrap"><canvas id="ch-scatter1"></canvas></div></div>
+    <div class="card"><div class="ctit">Presencia Institucional vs. Indicadores</div><div class="csub">Comparativa: IELR · Operaciones · Cobertura por provincia</div><div class="cwrap"><canvas id="ch-scatter2"></canvas></div></div>
+  </div>
+  <div class="cgrid c2">
+    <div class="card"><div class="ctit">Radar Multi-Indicador — Grandes Provincias</div><div class="csub">Comparación normalizada (0-100): IELR · Operaciones · Cobertura · Riesgo</div><div class="cwrap"><canvas id="ch-radar"></canvas></div></div>
+    <div class="card"><div class="ctit">Flujo por Tipo de Explotación</div><div class="csub">Denuncias → Investigaciones → Víctimas reconocidas en sentencias</div><div class="cwrap"><canvas id="ch-efic2"></canvas></div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="ctit">Tabla de Correlaciones Territoriales</div>
+    <div class="csub">Indicadores integrados por provincia · RENATRE · SISTRATA · COMITÉ</div>
+    <div style="overflow-x:auto">
+    <table class="ctable">
+      <thead><tr>
+        <th>Provincia</th><th>Actas IELR</th><th>% Nacional</th><th>Tareas SISTRATA</th>
+        <th>Prog. Inst.</th><th>Nivel IELR</th><th>Brecha</th><th>Riesgo</th>
+      </tr></thead>
+      <tbody id="corr-tbody"></tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctit">Sistema Completo — Comparativa por Tipo de Explotación</div>
+    <div class="csub">Denuncias · Investigaciones · Víctimas en sentencias (escala proporcional)</div>
+    <div class="cwrap" style="height:260px"><canvas id="ch-compare"></canvas></div>
+  </div>
+</div>
+
+<!-- ══════════════ INSTITUCIONAL ══════════════ -->
+<div class="sec" id="sec-institucional">
+  <div class="stitle">Presencia Institucional Provincial</div>
+  <div class="ssub">Organismos anti-trata relevados por el COMITÉ Ejecutivo · 2025</div>
+  <div class="kgrid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kcard ve"><div class="ki">🏛️</div><div class="kv">23</div><div class="kl">Provincias con Programa</div></div>
+    <div class="kcard"><div class="ki">📋</div><div class="kv">23</div><div class="kl">Organismos Relevados</div></div>
+    <div class="kcard na"><div class="ki">⚠️</div><div class="kv">1</div><div class="kl">Sin dato completo</div></div>
+  </div>
+  <div class="map-block" style="height:400px">
+    <div class="mol">🏛️ Cobertura de programas anti-trata provinciales · 2025</div>
+    <div id="map-inst2" class="lmap" style="height:400px"></div>
+    <div class="mleg">
+      <div class="mleg-t">Tipo de Organismo</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#003B79;display:inline-block"></span>Prog. Específico</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#17704A;display:inline-block"></span>DDHH Provincial</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#6C3483;display:inline-block"></span>Sec. Mujer/Género</div>
+      <div class="mleg-r"><span style="width:13px;height:13px;border-radius:50%;background:#E07B39;display:inline-block"></span>Desarrollo Social</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctit">Programas Provinciales Anti-Trata</div>
+    <div class="csub">Oficinas y puntos focales de asistencia y denuncia por provincia</div>
+    <div class="igrid" id="inst-grid"></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<footer style="background:var(--az);color:rgba(255,255,255,.6);text-align:center;padding:16px;font-size:12px;margin-top:40px">
+  <strong style="color:#fff">Observatorio de la Trata en Argentina</strong> · COMITÉ Ejecutivo · RENATRE · PROTEX · SISTRATA · 2023–2025<br>
+  República Argentina · Ley 26.364 modificada por Ley 26.842
+</footer>
+
+<script>
+/* ══════ DATA ══════ */
+const PROVS = [
+  {n:'Buenos Aires',   lat:-36.68,  lng:-60.56, ielr:118, ops:1225, inst:1, tipo:'prog'},
+  {n:'CABA',           lat:-34.60,  lng:-58.38, ielr:0,   ops:1208, inst:0, tipo:''},
+  {n:'Córdoba',        lat:-31.41,  lng:-64.18, ielr:239, ops:280,  inst:1, tipo:'prog'},
+  {n:'Santa Fe',       lat:-30.71,  lng:-60.95, ielr:43,  ops:210,  inst:1, tipo:'prog'},
+  {n:'Mendoza',        lat:-32.89,  lng:-68.85, ielr:104, ops:180,  inst:1, tipo:'genero'},
+  {n:'Tucumán',        lat:-26.81,  lng:-65.22, ielr:1,   ops:90,   inst:1, tipo:'ddhh'},
+  {n:'Entre Ríos',     lat:-31.77,  lng:-60.50, ielr:37,  ops:120,  inst:1, tipo:'ddhh'},
+  {n:'Salta',          lat:-24.78,  lng:-65.42, ielr:0,   ops:80,   inst:1, tipo:'social'},
+  {n:'Misiones',       lat:-27.43,  lng:-55.93, ielr:15,  ops:60,   inst:1, tipo:'genero'},
+  {n:'Chaco',          lat:-27.43,  lng:-59.02, ielr:10,  ops:50,   inst:1, tipo:'ddhh'},
+  {n:'Corrientes',     lat:-27.47,  lng:-58.83, ielr:77,  ops:95,   inst:1, tipo:'social'},
+  {n:'Stgo. del Estero',lat:-27.80, lng:-64.26, ielr:83,  ops:85,   inst:1, tipo:'prog'},
+  {n:'San Juan',       lat:-31.54,  lng:-68.54, ielr:0,   ops:40,   inst:1, tipo:'social'},
+  {n:'Jujuy',          lat:-23.45,  lng:-65.11, ielr:3,   ops:60,   inst:1, tipo:'social'},
+  {n:'Río Negro',      lat:-39.04,  lng:-67.03, ielr:0,   ops:35,   inst:1, tipo:'social'},
+  {n:'Neuquén',        lat:-38.95,  lng:-68.06, ielr:5,   ops:30,   inst:1, tipo:'prog'},
+  {n:'Formosa',        lat:-26.18,  lng:-58.18, ielr:21,  ops:40,   inst:1, tipo:'genero'},
+  {n:'Chubut',         lat:-43.29,  lng:-65.11, ielr:1,   ops:20,   inst:1, tipo:'social'},
+  {n:'San Luis',       lat:-33.30,  lng:-66.34, ielr:7,   ops:25,   inst:1, tipo:'prog'},
+  {n:'La Pampa',       lat:-36.61,  lng:-64.28, ielr:5,   ops:22,   inst:1, tipo:'ddhh'},
+  {n:'Santa Cruz',     lat:-51.62,  lng:-69.22, ielr:1,   ops:15,   inst:1, tipo:'genero'},
+  {n:'La Rioja',       lat:-29.41,  lng:-66.86, ielr:19,  ops:30,   inst:1, tipo:'ddhh'},
+  {n:'Catamarca',      lat:-28.47,  lng:-65.78, ielr:11,  ops:25,   inst:1, tipo:'ddhh'},
+  {n:'Tierra del Fuego',lat:-54.80, lng:-68.30, ielr:0,   ops:10,   inst:1, tipo:'genero'},
+];
+
+const LOCALIDADES = [
+  {n:'Bouwer',          p:'CBA',lat:-31.60,lng:-64.21,v:42,t:'tambo'},
+  {n:'Ticino',          p:'CBA',lat:-33.27,lng:-62.50,v:35,t:'tambo'},
+  {n:'Malargüe',        p:'MDZ',lat:-35.47,lng:-69.58,v:35,t:'horticola'},
+  {n:'Barrancas',       p:'SF', lat:-33.13,lng:-58.93,v:33,t:'horticola'},
+  {n:'Ituzaingó',       p:'COR',lat:-27.57,lng:-56.68,v:31,t:'forestal'},
+  {n:'Zárate',          p:'BA', lat:-34.10,lng:-59.02,v:28,t:'tambo'},
+  {n:'Tintina',         p:'SDE',lat:-27.03,lng:-62.72,v:25,t:'desmonte'},
+  {n:'San José',        p:'CBA',lat:-31.55,lng:-64.40,v:24,t:'tambo'},
+  {n:'Abasto',          p:'BA', lat:-34.93,lng:-58.28,v:22,t:'horticola'},
+  {n:'Tres Porteñas',   p:'MDZ',lat:-33.07,lng:-68.47,v:21,t:'vid'},
+  {n:'Lima',            p:'BA', lat:-33.75,lng:-59.82,v:21,t:'tambo'},
+  {n:'Marull',          p:'CBA',lat:-30.97,lng:-62.82,v:18,t:'tambo'},
+  {n:'Paramillo Lavalle',p:'MDZ',lat:-32.70,lng:-68.00,v:17,t:'horticola'},
+  {n:'Nonogasta',       p:'LR', lat:-29.35,lng:-67.35,v:16,t:'vid'},
+  {n:'Morteros',        p:'CBA',lat:-30.72,lng:-62.00,v:15,t:'tambo'},
+  {n:'Quimilí',         p:'SDE',lat:-27.63,lng:-62.42,v:15,t:'desmonte'},
+  {n:'Mercedes',        p:'COR',lat:-29.18,lng:-58.08,v:10,t:'forestal'},
+  {n:'Formosa Cap.',    p:'FOR',lat:-26.18,lng:-58.18,v:7, t:'ganadera'},
+  {n:'Tilcara',         p:'JUJ',lat:-23.58,lng:-65.40,v:3, t:'horticola'},
+  {n:'Corrientes Cap.', p:'COR',lat:-27.47,lng:-58.83,v:12,t:'forestal'},
+  {n:'San Martín MDZ',  p:'MDZ',lat:-33.08,lng:-68.47,v:12,t:'vid'},
+  {n:'Stgo Estero Cap.',p:'SDE',lat:-27.80,lng:-64.26,v:10,t:'desmonte'},
+  {n:'Diego de Rojas',  p:'CBA',lat:-33.17,lng:-63.33,v:9, t:'tambo'},
+];
+
+const INSTITUCIONAL = [
+  {p:'Buenos Aires',     o:'Programa de Rescate y Acompañamiento — Min. Justicia y DDHH',tipo:'prog'},
+  {p:'Catamarca',        o:'Subsecretaría de DDHH',tipo:'ddhh'},
+  {p:'Chaco',            o:'Subsecretaría de DDHH de la Provincia',tipo:'ddhh'},
+  {p:'Chubut',           o:'Subsecretaría de Niñez, Adolescencia y Familia',tipo:'social'},
+  {p:'Córdoba',          o:'Dirección General de Asistencia Integral a la Víctima',tipo:'prog'},
+  {p:'Corrientes',       o:'Ministerio de Gobierno y Trabajo',tipo:'social'},
+  {p:'Entre Ríos',       o:'Subsecretaría de DDHH — Min. Justicia y DDHH',tipo:'ddhh'},
+  {p:'Formosa',          o:'Consejo Provincial de la Mujer e Igualdad de Género',tipo:'genero'},
+  {p:'Jujuy',            o:'Dirección de DDHH — Min. Desarrollo Social',tipo:'social'},
+  {p:'La Pampa',         o:'Subsecretaría de Igualdad de Oportunidades — Min. DDHH',tipo:'ddhh'},
+  {p:'La Rioja',         o:'Subsecretaría de DDHH',tipo:'ddhh'},
+  {p:'Mendoza',          o:'Área de Trata y Explotación — Secretaría de la Mujer',tipo:'genero'},
+  {p:'Misiones',         o:'Dirección de Asistencia a Víctimas de Trata — Sec. Mujeres',tipo:'genero'},
+  {p:'Neuquén',          o:'Área de Trata — Centro de Atención a la Víctima',tipo:'prog'},
+  {p:'Río Negro',        o:'Programa de Asistencia a Víctimas — Sub. Inclusión Social',tipo:'social'},
+  {p:'Salta',            o:'Dirección General de Desarrollo Comunitario — Min. Gobierno',tipo:'social'},
+  {p:'San Juan',         o:'Min. de Familia y Desarrollo Humano — Dirección de Género',tipo:'social'},
+  {p:'San Luis',         o:'Dirección Provincial de Lucha contra la Trata',tipo:'prog'},
+  {p:'Santa Cruz',       o:'Dirección de Asistencia a Víctimas — Sec. Mujeres',tipo:'genero'},
+  {p:'Santa Fe',         o:'Programa de Lucha contra la Trata — Sec. DDHH',tipo:'prog'},
+  {p:'Stgo. del Estero', o:'Dirección de Prevención de la Trata — Min. Desarrollo Social',tipo:'prog'},
+  {p:'Tucumán',          o:'Programa de Antiimpunidad — Dirección de DDHH',tipo:'ddhh'},
+  {p:'Tierra del Fuego', o:'Dirección Provincial de Género',tipo:'genero'},
+];
+
+const TIPO_COL = {prog:'#003B79', ddhh:'#17704A', genero:'#6C3483', social:'#E07B39'};
+
+/* ══════ PAGE BACKGROUND CANVAS ══════ */
+window.addEventListener('load', function(){
+  const cv=document.getElementById('page-bg-canvas');
+  if(!cv) return;
+  const ctx=cv.getContext('2d');
+  let W=0,H=0,stars=[],bubbles=[];
+  const PNORM=[[.52,.38],[.55,.42],[.47,.55],[.52,.48],[.42,.54],[.50,.30],[.55,.36],[.50,.22],[.55,.28],[.48,.28],[.57,.28],[.53,.34],[.42,.42],[.50,.17],[.46,.63],[.45,.67],[.50,.25],[.45,.73],[.46,.59],[.48,.60],[.46,.80],[.46,.46],[.49,.36],[.46,.88]];
+  function resizeBG(){
+    const ratio=Math.min(window.devicePixelRatio||1,2);
+    W=window.innerWidth; H=window.innerHeight;
+    cv.width=Math.round(W*ratio); cv.height=Math.round(H*ratio);
+    cv.style.width=W+'px'; cv.style.height=H+'px';
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    stars=Array.from({length:140},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.7+.4,vx:(Math.random()-.5)*.08,vy:(Math.random()-.5)*.08,a:Math.random()*.35+.08}));
+    bubbles=PNORM.map((pt,i)=>{const p=PROVS[i]||PROVS[0];const bx=W*(0.20+pt[0]*0.62);const by=H*(0.05+pt[1]*0.90);const base=Math.max(10,Math.min(38,(p.ielr+p.ops/8)/6));return{x:bx,y:by,baseR:base,pulse:Math.random()*Math.PI*2,speed:.01+Math.random()*.008,ielr:p.ielr,n:p.n};});
+  }
+  function drawBG(){
+    if(!W||!H){ requestAnimationFrame(drawBG); return; }
+    ctx.clearRect(0,0,W,H);
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'rgba(2,23,45,.92)');
+    g.addColorStop(.45,'rgba(4,36,68,.80)');
+    g.addColorStop(1,'rgba(7,55,97,.78)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    stars.forEach(s=>{
+      s.x+=s.vx; s.y+=s.vy;
+      if(s.x<0)s.x=W; if(s.x>W)s.x=0; if(s.y<0)s.y=H; if(s.y>H)s.y=0;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(184,217,240,${s.a})`; ctx.fill();
+    });
+
+    ctx.lineWidth=.6;
+    bubbles.forEach((b,i)=>bubbles.forEach((b2,j)=>{
+      if(j<=i) return;
+      const d=Math.hypot(b.x-b2.x,b.y-b2.y);
+      if(d<W*.13){
+        ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b2.x,b2.y);
+        ctx.strokeStyle=`rgba(116,172,223,${.04*(1-d/(W*.13))})`; ctx.stroke();
+      }
+    }));
+
+    bubbles.forEach(b=>{
+      b.pulse+=b.speed;
+      const pr=b.baseR+Math.sin(b.pulse)*b.baseR*.18;
+      const col=b.ielr>50?'192,57,43':b.ielr>10?'224,123,57':'116,172,223';
+      const halo=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,pr*2.8);
+      halo.addColorStop(0,`rgba(${col},.20)`); halo.addColorStop(1,`rgba(${col},0)`);
+      ctx.beginPath(); ctx.arc(b.x,b.y,pr*2.8,0,Math.PI*2); ctx.fillStyle=halo; ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x,b.y,pr,0,Math.PI*2); ctx.fillStyle=`rgba(${col},.16)`; ctx.fill();
+      ctx.strokeStyle=`rgba(184,217,240,.18)`; ctx.lineWidth=.9; ctx.stroke();
+    });
+    requestAnimationFrame(drawBG);
+  }
+  window.addEventListener('resize', resizeBG);
+  resizeBG();
+  drawBG();
+});
+
+/* ══════ HERO CANVAS ══════ */
+window.addEventListener('load', function(){
+  const cv=document.getElementById('hero-canvas'),ctx=cv.getContext('2d');
+  let W,H,pts=[],bubbles=[],running=false;
+  const PNORM=[[.52,.38],[.55,.42],[.47,.55],[.52,.48],[.42,.54],[.50,.30],[.55,.36],[.50,.22],[.55,.28],[.48,.28],[.57,.28],[.53,.34],[.42,.42],[.50,.17],[.46,.63],[.45,.67],[.50,.25],[.45,.73],[.46,.59],[.48,.60],[.46,.80],[.46,.46],[.49,.36],[.46,.88]];
+  function resize(){
+    const hero=document.querySelector('.hero');
+    W=cv.width=hero.offsetWidth||window.innerWidth;
+    H=cv.height=hero.offsetHeight||320;
+    pts=Array.from({length:100},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.8+.4,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,a:Math.random()*.4+.1}));
+    bubbles=PNORM.map((pt,i)=>{const p=PROVS[i]||PROVS[0];const b=Math.max((p.ielr+p.ops/10)/10,5);return{x:pt[0]*W,y:pt[1]*H,baseR:b,pulse:Math.random()*Math.PI*2,speed:.018+Math.random()*.01,ielr:p.ielr,n:p.n.split(' ')[0]};});
+  }
+  function draw(){
+    if(!W||!H){requestAnimationFrame(draw);return;}
+    ctx.clearRect(0,0,W,H);
+    ctx.lineWidth=.5;
+    bubbles.forEach((b,i)=>bubbles.forEach((b2,j)=>{if(j<=i)return;const d=Math.hypot(b.x-b2.x,b.y-b2.y);if(d<W*.17){ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b2.x,b2.y);ctx.strokeStyle=`rgba(116,172,223,${.07*(1-d/(W*.17))})`;ctx.stroke();}}));
+    pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(116,172,223,${p.a})`;ctx.fill();});
+    bubbles.forEach(b=>{
+      b.pulse+=b.speed;
+      const pr=b.baseR+Math.sin(b.pulse)*b.baseR*.25;
+      const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,pr*2.5);
+      const col=b.ielr>50?'192,57,43':b.ielr>10?'224,123,57':'116,172,223';
+      g.addColorStop(0,`rgba(${col},.4)`);g.addColorStop(1,`rgba(${col},0)`);
+      ctx.beginPath();ctx.arc(b.x,b.y,pr*2.5,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+      ctx.beginPath();ctx.arc(b.x,b.y,pr,0,Math.PI*2);ctx.fillStyle=`rgba(${col},.55)`;ctx.fill();
+      ctx.strokeStyle=`rgba(255,255,255,.5)`;ctx.lineWidth=.7;ctx.stroke();
+      if(b.baseR>7){ctx.fillStyle='rgba(255,255,255,.6)';ctx.font=`bold ${Math.max(8,Math.min(b.baseR,11))}px Raleway,sans-serif`;ctx.textAlign='center';ctx.fillText(b.n,b.x,b.y+pr+10);}
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);
+  resize();
+  draw();
+});
+
+/* ══════ TILE LAYERS ══════
+   ESRI tiles: no API key, no subdomains, crossOrigin anónimo — los más confiables
+   OSM: fallback alternativo con subdomains a,b,c
+══════ */
+const T = {
+  LIGHT: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  GRAY:  'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+  DARK:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  STREET:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  OSM:   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+};
+const ATTR_CARTO = '© OpenStreetMap contributors · © CARTO';
+const ATTR_OSM  = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+function mkMap(id, lat, lng, zoom, tileKey){
+  const el = document.getElementById(id);
+  if(!el){ console.warn('Map container not found:', id); return null; }
+  const m = L.map(id, {zoomControl:true, scrollWheelZoom:true, preferCanvas:true}).setView([lat, lng], zoom);
+  const key = T[tileKey] ? tileKey : 'LIGHT';
+  const url = T[key];
+  const isOSM = key === 'OSM' || key === 'STREET';
+  const layer = L.tileLayer(url, {
+    attribution: isOSM ? ATTR_OSM : ATTR_CARTO,
+    maxZoom: 19,
+    subdomains: isOSM ? 'abc' : 'abcd',
+  });
+  layer.on('tileerror', function(){
+    if(key !== 'OSM'){
+      try {
+        if(!m._osmFallbackAdded){
+          m._osmFallbackAdded = true;
+          L.tileLayer(T.OSM, { attribution: ATTR_OSM, maxZoom: 19, subdomains: 'abc' }).addTo(m);
+        }
+      } catch(e){}
+    }
+  });
+  layer.addTo(m);
+  [200, 600, 1400].forEach(ms => setTimeout(() => { try{ m.invalidateSize(); }catch(e){} }, ms));
+  return m;
+}
+
+function bRadius(v){ return v>=150?32:v>=100?26:v>=50?20:v>=20?14:v>=10?10:v>=5?7:5 }
+function riskColor(ielr,ops){
+  const r=ielr/239*60+ops/1225*40;
+  return r>55?'#C0392B':r>30?'#E07B39':r>12?'#0072BB':'#74ACDF';
+}
+
+/* Maps registry */
+const MAPS={};
+
+/* ══════ MAP: RESUMEN (correlaciones) ══════ */
+function initMapResumen(){
+  if(MAPS.resumen) return;
+  MAPS.resumen = mkMap('map-resumen',-34.5,-65,4,'STREET');
+  if(!MAPS.resumen) return;
+  PROVS.forEach(p=>{
+    const risk = p.ielr/239*60 + p.ops/1225*40;
+    const col = riskColor(p.ielr,p.ops);
+    const r = Math.max(8, Math.round(risk/2)+8);
+    const instCol = p.inst ? '#17704A':'#BDC3C7';
+
+    // Halo de riesgo
+    L.circleMarker([p.lat,p.lng],{
+      radius:r+6, color:col, fillColor:col, fillOpacity:.08, weight:0
+    }).addTo(MAPS.resumen);
+
+    // Burbuja principal
+    L.circleMarker([p.lat,p.lng],{
+      radius:r, color:col, fillColor:col, fillOpacity:.4, weight:2.5, opacity:.9
+    }).bindTooltip(`
+      <strong style="font-family:Raleway;font-size:13px">${p.n}</strong><br>
+      📋 Actas IELR: <b>${p.ielr||'Sin dato'}</b><br>
+      🛡️ Tareas SISTRATA: <b>${p.ops}</b><br>
+      🏛️ Programa inst.: <b>${p.inst?'✅ Sí':'❌ No'}</b><br>
+      📊 Riesgo relativo: <b>${Math.round(risk)}%</b>
+    `,{sticky:true}).addTo(MAPS.resumen);
+
+    // Indicador institucional pequeño
+    L.circleMarker([p.lat,p.lng],{
+      radius:3.5, color:instCol, fillColor:instCol, fillOpacity:1, weight:1
+    }).addTo(MAPS.resumen);
+
+    // Label con fondo translúcido
+    if(r >= 12){
+      L.marker([p.lat,p.lng],{
+        icon:L.divIcon({
+          html:`<div style="background:rgba(0,0,0,.55);color:#fff;font-family:Raleway,sans-serif;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap;backdrop-filter:blur(4px);border:1px solid ${col}55;margin-top:${r+4}px">${p.n.length>14?p.n.split(' ').slice(0,2).join(' '):p.n}</div>`,
+          iconAnchor:[0,0],className:''
+        })
+      }).addTo(MAPS.resumen);
+    }
+  });
+}
+
+/* ══════ MAP: IELR BURBUJAS ══════ */
+function initMapIELR(){
+  if(MAPS.ielr) return;
+  MAPS.ielr = mkMap('map-ielr',-34.5,-65,4,'GRAY');
+  if(!MAPS.ielr) return;
+  PROVS.filter(p=>p.ielr>0).forEach(p=>{
+    const col = p.ielr>=100?'#003B79':p.ielr>=50?'#0072BB':p.ielr>=10?'#74ACDF':'#B8D9F0';
+    const r = bRadius(p.ielr);
+    L.circleMarker([p.lat,p.lng],{
+      radius:r, color:col, fillColor:col, fillOpacity:.38, weight:2, opacity:.9
+    }).bindTooltip(`<strong>${p.n}</strong><br>Actas IELR: <b>${p.ielr}</b><br>${Math.round(p.ielr/800*100)}% del total nacional`,{sticky:true}).addTo(MAPS.ielr);
+    if(r>=12){
+      L.marker([p.lat,p.lng],{
+        icon:L.divIcon({
+          html:`<div style="background:rgba(255,255,255,.92);color:#0b2f57;font-family:Raleway,sans-serif;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;white-space:nowrap;border:1px solid rgba(0,59,121,.35);box-shadow:0 1px 6px rgba(0,0,0,.18);text-shadow:none;margin-top:${r+3}px">${p.n.split(' ')[0]} · ${p.ielr}</div>`,
+          iconAnchor:[0,0],className:''
+        })
+      }).addTo(MAPS.ielr);
+    }
+  });
+}
+
+/* ══════ MAP: LOCALIDADES ══════ */
+function initMapLocal(){
+  if(MAPS.local) return;
+  MAPS.local = mkMap('map-local',-33,-62,5,'LIGHT');
+  if(!MAPS.local) return;
+  const tCol={tambo:'#C0392B',horticola:'#E07B39',forestal:'#17704A',desmonte:'#17704A',vid:'#003B79',olivicola:'#003B79',ganadera:'#6C3483',horticola2:'#E07B39'};
+  LOCALIDADES.forEach(loc=>{
+    const col=tCol[loc.t]||'#74ACDF';
+    const r=Math.max(6,Math.min(20,loc.v*0.45));
+    L.circleMarker([loc.lat,loc.lng],{
+      radius:r, color:col, fillColor:col, fillOpacity:.5, weight:1.8
+    }).bindTooltip(`<strong>${loc.n}</strong> · ${loc.p}<br>Actas: <b>${loc.v}</b><br>Actividad: <i>${loc.t}</i>`,{sticky:true})
+      .addTo(MAPS.local);
+  });
+}
+
+/* ══════ MAP: OPERACIONES SISTRATA ══════ */
+function initMapOps(){
+  if(MAPS.ops) return;
+  MAPS.ops = mkMap('map-ops',-34,-64,4,'DARK');
+  if(!MAPS.ops) return;
+  PROVS.forEach(p=>{
+    if(!p.ops) return;
+    const r=bRadius(p.ops/8);
+    const col=p.ops>=1000?'#C0392B':p.ops>=300?'#E07B39':'#74ACDF';
+    L.circleMarker([p.lat,p.lng],{
+      radius:r+6, color:col, fillColor:col, fillOpacity:.1, weight:0
+    }).addTo(MAPS.ops);
+    L.circleMarker([p.lat,p.lng],{
+      radius:r, color:col, fillColor:col, fillOpacity:.4, weight:2
+    }).bindTooltip(`<strong>${p.n}</strong><br>Tareas SISTRATA: <b>${p.ops}</b>`,{sticky:true}).addTo(MAPS.ops);
+    if(r>=12){
+      L.marker([p.lat,p.lng],{
+        icon:L.divIcon({
+          html:`<div style="background:rgba(192,57,43,.72);color:#fff;font-family:Raleway,sans-serif;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:5px;backdrop-filter:blur(4px);border:1px solid rgba(255,80,60,.3);margin-top:${r+3}px">${p.n.split(' ')[0]} ${p.ops}</div>`,
+          iconAnchor:[0,0],className:''
+        })
+      }).addTo(MAPS.ops);
+    }
+  });
+}
+
+/* ══════ MAP: INSTITUCIONAL ══════ */
+function initMapInst(id){
+  if(MAPS[id]) return;
+  MAPS[id] = mkMap(id,-34.5,-65,4,'STREET');
+  if(!MAPS[id]) return;
+  INSTITUCIONAL.forEach(inst=>{
+    const prov=PROVS.find(p=>p.n.toLowerCase().startsWith(inst.p.split(' ')[0].toLowerCase()));
+    if(!prov) return;
+    const col=TIPO_COL[inst.tipo]||'#003B79';
+    L.circleMarker([prov.lat,prov.lng],{
+      radius:13, color:col, fillColor:col, fillOpacity:.42, weight:2.5
+    }).bindPopup(`<strong style="font-family:Raleway;color:#003B79;font-size:13px">${inst.p}</strong><br><small style="line-height:1.5;color:#567899">${inst.o}</small>`)
+      .addTo(MAPS[id]);
+    L.marker([prov.lat,prov.lng],{
+      icon:L.divIcon({
+        html:`<div style="background:rgba(255,255,255,.94);color:#16324f;font-size:10.5px;font-weight:800;font-family:Raleway,sans-serif;padding:2px 7px;border-radius:5px;border-left:3px solid ${col};border:1px solid rgba(22,50,79,.14);white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.18);text-shadow:none;margin-top:17px">${inst.p}</div>`,
+        iconAnchor:[0,0],className:''
+      })
+    }).addTo(MAPS[id]);
+  });
+}
+
+/* ══════ MAP: RUTAS ══════ */
+function initMapRutas(){
+  if(MAPS.rutas) return;
+  MAPS.rutas = mkMap('map-rutas',-28,-62,4,'DARK');
+  if(!MAPS.rutas) return;
+
+  const NODES=[
+    {n:'CABA',lat:-34.60,lng:-58.38,role:'Destino Principal',col:'#C0392B',r:24},
+    {n:'Córdoba',lat:-31.41,lng:-64.18,role:'Nodo Intermediario',col:'#E07B39',r:17},
+    {n:'Rosario',lat:-32.96,lng:-60.69,role:'Nodo Intermediario',col:'#E07B39',r:15},
+    {n:'Mendoza',lat:-32.89,lng:-68.85,role:'Nodo Regional',col:'#74ACDF',r:13},
+    {n:'Tucumán',lat:-26.81,lng:-65.22,role:'Tránsito NOA',col:'#C0392B',r:12},
+    {n:'Salta',lat:-24.78,lng:-65.42,role:'Origen/Tránsito',col:'#E07B39',r:12},
+    {n:'Jujuy',lat:-23.45,lng:-65.11,role:'Entrada Bolivia',col:'#6C3483',r:11},
+    {n:'Formosa',lat:-26.18,lng:-58.18,role:'Entrada Int.',col:'#6C3483',r:11},
+    {n:'Posadas',lat:-27.37,lng:-55.90,role:'Entrada Brasil/PY',col:'#6C3483',r:11},
+    {n:'Corrientes',lat:-27.47,lng:-58.83,role:'Tránsito NE',col:'#E07B39',r:10},
+    {n:'La Quiaca',lat:-22.10,lng:-65.60,role:'Frontera Bolivia',col:'#6C3483',r:8},
+    {n:'Clorinda',lat:-25.28,lng:-57.72,role:'Frontera Paraguay',col:'#6C3483',r:8},
+    {n:'Pto. Iguazú',lat:-25.60,lng:-54.57,role:'Frontera Brasil',col:'#6C3483',r:8},
+    {n:'Stgo. Estero',lat:-27.80,lng:-64.26,role:'Origen Laboral',col:'#E07B39',r:10},
+  ];
+
+  const ROUTES=[
+    {pts:[[-22.10,-65.60],[-23.45,-65.11],[-24.78,-65.42],[-26.81,-65.22],[-31.41,-64.18],[-34.60,-58.38]],col:'#C0392B',w:3,dash:'',lbl:'Corredor Sexual NW'},
+    {pts:[[-25.28,-57.72],[-26.18,-58.18],[-27.47,-58.83],[-31.77,-60.50],[-34.60,-58.38]],col:'#003B79',w:3,dash:'',lbl:'Corredor Mixto NE'},
+    {pts:[[-27.80,-64.26],[-31.41,-64.18],[-32.96,-60.69],[-34.60,-58.38]],col:'#E07B39',w:2.5,dash:'8,6',lbl:'Corredor Laboral Central'},
+    {pts:[[-32.89,-68.85],[-34.60,-58.38]],col:'#C0392B',w:2,dash:'5,4',lbl:'Ruta Mendoza–CABA'},
+    {pts:[[-25.60,-54.57],[-27.37,-55.90],[-27.47,-58.83],[-31.77,-60.50],[-34.60,-58.38]],col:'#6C3483',w:2.5,dash:'',lbl:'Ruta Internacional Brasil'},
+    {pts:[[-28.47,-65.78],[-31.41,-64.18],[-34.60,-58.38]],col:'#E07B39',w:1.8,dash:'7,5',lbl:'Ruta Laboral NOA'},
+  ];
+
+  ROUTES.forEach(r=>{
+    L.polyline(r.pts,{color:r.col,weight:r.w,opacity:.85,dashArray:r.dash||undefined})
+     .bindTooltip(`<strong>${r.lbl}</strong>`,{sticky:true}).addTo(MAPS.rutas);
+  });
+  NODES.forEach(nd=>{
+    L.circleMarker([nd.lat,nd.lng],{radius:nd.r+6,color:nd.col,fillColor:nd.col,fillOpacity:.1,weight:0}).addTo(MAPS.rutas);
+    L.circleMarker([nd.lat,nd.lng],{radius:nd.r,color:nd.col,fillColor:nd.col,fillOpacity:.55,weight:2.5,opacity:.9})
+     .bindTooltip(`<strong>${nd.n}</strong><br>${nd.role}`,{sticky:true}).addTo(MAPS.rutas);
+    L.marker([nd.lat,nd.lng],{
+      icon:L.divIcon({
+        html:`<div style="background:rgba(0,0,0,.65);color:#fff;font-family:Raleway,sans-serif;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:5px;white-space:nowrap;backdrop-filter:blur(4px);border:1px solid ${nd.col}77;margin-top:${nd.r+4}px">${nd.n}</div>`,
+        iconAnchor:[0,0],className:''
+      })
+    }).addTo(MAPS.rutas);
+  });
+}
+
+/* ══════ SECTION NAVIGATION ══════ */
+function showSec(name, btn){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  btn.classList.add('active');
+
+  // Init maps lazily — mkMap() already schedules invalidateSize internally
+  setTimeout(()=>{
+    if(name==='resumen' && window.L)  initMapResumen();
+    if(name==='mapas' && window.L){   initMapIELR(); initMapLocal(); initMapOps(); initMapInst('map-inst'); }
+    if(name==='rutas' && window.L)    initMapRutas();
+    if(name==='institucional'){ if(window.L) initMapInst('map-inst2'); buildInst(); }
+    if(name==='correlaciones' && window.Chart) initCorr();
+  }, 50);
+}
+
+/* ══════ BUILD INSTITUTIONS ══════ */
+function buildInst(){
+  const g=document.getElementById('inst-grid');
+  if(g.children.length>0) return;
+  INSTITUCIONAL.forEach(i=>{
+    const d=document.createElement('div');d.className='icard';
+    d.style.borderLeftColor=TIPO_COL[i.tipo]||'#003B79';
+    d.innerHTML=`<div class="icard-p">🏛️ ${i.p}</div><div class="icard-n">${i.o}</div>`;
+    g.appendChild(d);
+  });
+}
+
+/* ══════ CORRELACIONES ══════ */
+let corrDone=false;
+function initCorr(){
+  if(corrDone) return; corrDone=true;
+  // Table
+  const tb=document.getElementById('corr-tbody');
+  const sorted=[...PROVS].filter(p=>p.ielr>0||p.ops>100).sort((a,b)=>(b.ielr+b.ops/10)-(a.ielr+a.ops/10));
+  sorted.forEach(p=>{
+    const risk=Math.round(p.ielr/239*60+p.ops/1225*40);
+    const nivel=p.ielr>=100?'🔴 Muy alto':p.ielr>=50?'🟠 Alto':p.ielr>=10?'🟡 Medio':'🟢 Bajo';
+    const brecha=p.inst&&p.ielr>=50?'⚠️ Alta carga':p.inst?'✅ Cubierta':'❌ Sin programa';
+    const barCol=risk>=55?'#C0392B':risk>=30?'#E07B39':'#0072BB';
+    const tr=document.createElement('tr');
+    tr.className=risk>=55?'hi':risk>=30?'me':'';
+    tr.innerHTML=`<td><strong>${p.n}</strong></td>
+      <td class="num">${p.ielr||'—'}</td>
+      <td class="num">${p.ielr?Math.round(p.ielr/800*100)+'%':'—'}</td>
+      <td class="num">${p.ops}</td>
+      <td>${p.inst?'✅':'❌'}</td>
+      <td>${nivel}</td>
+      <td>${brecha}</td>
+      <td><div class="rbar-wrap"><div class="rbar" style="width:${risk}%;background:${barCol}"></div></div> ${risk}%</td>`;
+    tb.appendChild(tr);
+  });
+
+  // Scatter
+  const scPts=PROVS.filter(p=>p.ielr>0&&p.ops>0);
+  new Chart(document.getElementById('ch-scatter1'),{type:'bubble',
+    data:{datasets:[{label:'Provincia',data:scPts.map(p=>({x:p.ielr,y:p.ops,r:Math.max(5,p.ielr/14),label:p.n})),
+      backgroundColor:scPts.map(p=>`rgba(0,114,187,${Math.min(.7,.2+p.ielr/300)})`),borderColor:'#0072BB',borderWidth:1.5}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw.label}: IELR ${ctx.raw.x} · Ops ${ctx.raw.y}`}}},
+      scales:{x:{title:{display:true,text:'Actas IELR',font:{family:'Raleway',weight:'bold'}},grid:{color:'#f0f0f0'}},
+              y:{title:{display:true,text:'Tareas SISTRATA',font:{family:'Raleway',weight:'bold'}},grid:{color:'#f0f0f0'}}}}
+  });
+
+  const filtP=PROVS.filter(p=>p.ielr>5);
+  new Chart(document.getElementById('ch-scatter2'),{type:'bar',
+    data:{labels:filtP.map(p=>p.n.split(' ')[0]),
+      datasets:[
+        {label:'Actas IELR',data:filtP.map(p=>p.ielr),backgroundColor:'rgba(0,114,187,.65)',borderRadius:3},
+        {label:'Tareas Seg. /10',data:filtP.map(p=>Math.round(p.ops/10)),backgroundColor:'rgba(192,57,43,.55)',borderRadius:3},
+        {label:'Prog. Inst. ×30',data:filtP.map(p=>p.inst*30),backgroundColor:'rgba(23,112,74,.55)',borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#f0f0f0'}}}}
+  });
+
+  new Chart(document.getElementById('ch-radar'),{type:'radar',
+    data:{labels:['IELR Laboral','Operaciones','Cobert. Inst.','Presión Denuncias','Riesgo Trata'],
+      datasets:[
+        {label:'Buenos Aires',data:[49,100,100,70,75],backgroundColor:'rgba(0,59,121,.12)',borderColor:'#003B79',pointBackgroundColor:'#003B79'},
+        {label:'Córdoba',data:[100,23,100,55,80],backgroundColor:'rgba(192,57,43,.1)',borderColor:'#C0392B',pointBackgroundColor:'#C0392B'},
+        {label:'Mendoza',data:[43,15,100,40,55],backgroundColor:'rgba(23,112,74,.1)',borderColor:'#17704A',pointBackgroundColor:'#17704A'},
+        {label:'Stgo. Estero',data:[35,7,100,25,60],backgroundColor:'rgba(224,123,57,.1)',borderColor:'#E07B39',pointBackgroundColor:'#E07B39'}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
+      scales:{r:{ticks:{display:false},pointLabels:{font:{size:11}}}}}
+  });
+
+  new Chart(document.getElementById('ch-efic2'),{type:'bar',
+    data:{labels:['Sexual','Laboral','Búsqueda','Otros'],
+      datasets:[
+        {label:'Denuncias (÷10)',data:[783,359,266,497],backgroundColor:'rgba(116,172,223,.8)',borderRadius:4},
+        {label:'Investigaciones',data:[2078,1047,117,546],backgroundColor:'rgba(0,114,187,.8)',borderRadius:4},
+        {label:'Víctimas Sentencias',data:[1755,853,0,13],backgroundColor:'rgba(192,57,43,.8)',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'},ticks:{callback:v=>v.toLocaleString('es-AR')}}}}
+  });
+
+  new Chart(document.getElementById('ch-compare'),{type:'bar',
+    data:{labels:['Explotación Sexual','Explotación Laboral','Búsqueda Personas','Captación Engañosa','Otros'],
+      datasets:[
+        {label:'Denuncias',data:[7831,3590,2656,1902,3067],backgroundColor:'rgba(116,172,223,.85)',stack:'a'},
+        {label:'Investigaciones',data:[2078,1047,117,0,546],backgroundColor:'rgba(0,114,187,.85)',stack:'b'},
+        {label:'Víctimas (Sentencias)',data:[1755,853,0,0,13],backgroundColor:'rgba(192,57,43,.85)',stack:'c'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:12}}}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'},ticks:{callback:v=>v.toLocaleString('es-AR')}}}}
+  });
+}
+
+/* ══════ CHART.JS ══════ */
+if(window.Chart){ Chart.defaults.font.family="'Source Sans Pro',sans-serif"; Chart.defaults.color='#567899'; }
+const C={az:'#003B79',azm:'#0072BB',cel:'#74ACDF',ro:'#C0392B',na:'#E07B39',ve:'#17704A',mo:'#6C3483',am:'#C49A10',gr:'#BDC3C7'};
+
+function initCharts(){
+  // RESUMEN
+  new Chart(document.getElementById('ch-funnel'),{type:'bar',
+    data:{labels:['Denuncias Línea 145','Investigaciones','Sentencias Definitivas','Personas Condenadas'],
+      datasets:[{data:[19046,3794,644,978],backgroundColor:[C.cel,C.azm,C.az,C.ro],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw.toLocaleString('es-AR')}`}}},
+      scales:{x:{grid:{display:false}},y:{grid:{display:false}}}}
+  });
+  new Chart(document.getElementById('ch-den-tipo'),{type:'doughnut',
+    data:{labels:['Sexual','Laboral','Búsqueda','Captación','Otros'],
+      datasets:[{data:[7831,3590,2656,1902,3067],backgroundColor:[C.ro,C.na,C.azm,C.mo,C.gr],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+  });
+  new Chart(document.getElementById('ch-vt-res'),{type:'doughnut',
+    data:{labels:['Sexual','Laboral','Mixto','Otros'],datasets:[{data:[1755,853,4,9],backgroundColor:[C.ro,C.na,C.mo,C.gr],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+  });
+  new Chart(document.getElementById('ch-fz-res'),{type:'doughnut',
+    data:{labels:['PFA','GNA','PSA','PNA','Prov.'],datasets:[{data:[1643,1009,394,390,100],backgroundColor:[C.az,C.ve,C.na,C.cel,C.gr],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+  });
+  new Chart(document.getElementById('ch-rub-res'),{type:'doughnut',
+    data:{labels:['Tambo','Hortícola','Ganadera','Papa','Desmonte','Otros'],datasets:[{data:[145,117,87,74,40,137],backgroundColor:['#003B79','#0A5F9E','#0072BB','#3099D0','#74ACDF','#B8D9F0'],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}
+  });
+
+  // MAPAS
+  new Chart(document.getElementById('ch-map-rank'),{type:'bar',
+    data:{labels:['Córdoba','Buenos Aires','Mendoza','Stgo. Estero','Corrientes','Santa Fe','Entre Ríos','Formosa','La Rioja','Misiones','Catamarca','Chaco','San Luis','La Pampa','Neuquén','Jujuy'],
+      datasets:[{label:'Actas IELR',data:[239,118,104,83,77,43,37,21,19,15,11,10,7,5,5,3],
+        backgroundColor:['#003B79','#0A5F9E','#0A6DAD','#0072BB','#1A88CC','#3099D0','#5AABDA','#74ACDF','#8DBDE8','#A8CEEF','#B8D9F0','#C8E5F5','#D5EEF9','#E0F3FD','#E8F6FE','#F0FAFF'],borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',
+      plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  new Chart(document.getElementById('ch-ops-tipo'),{type:'bar',
+    data:{labels:['Sexual','Laboral','Sin Det.','Otros'],
+      datasets:[
+        {label:'Buenos Aires',data:[710,300,180,35],backgroundColor:'rgba(0,59,121,.8)',borderRadius:4},
+        {label:'CABA',data:[700,290,170,48],backgroundColor:'rgba(0,114,187,.8)',borderRadius:4},
+        {label:'Otras',data:[632,460,34,17],backgroundColor:'rgba(116,172,223,.8)',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'}}}}
+  });
+
+  // RUTAS
+  new Chart(document.getElementById('ch-intern'),{type:'bar',
+    data:{labels:['Bolivia → NOA','Paraguay → Formosa/NE','Brasil → Misiones/Posadas','Perú → NOA','Venezuela → BA/CABA'],
+      datasets:[{label:'Casos est.',data:[100,80,55,25,30],backgroundColor:['#6C3483','#7D3C98','#8E44AD','#9B59B6','#A569BD'],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',
+      plugins:{legend:{display:false}},scales:{x:{grid:{display:false},max:120},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+  });
+
+  // DENUNCIAS
+  new Chart(document.getElementById('ch-den2'),{type:'doughnut',
+    data:{labels:['Explotación Sexual','Explotación Laboral','Búsqueda Personas','Captación Engañosa','Otros'],
+      datasets:[{data:[7831,3590,2656,1902,3067],backgroundColor:[C.ro,C.na,C.azm,C.mo,C.gr],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{position:'right',labels:{font:{size:11}}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw.toLocaleString('es-AR')} (${Math.round(ctx.raw/19046*100)}%)`}}}}
+  });
+  new Chart(document.getElementById('ch-inv'),{type:'bar',
+    data:{labels:['Sexual','Laboral','Otros Delitos','Búsqueda','S/D'],
+      datasets:[{data:[2078,1047,546,117,6],backgroundColor:[C.ro,C.na,C.azm,C.mo,C.gr],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'}}}}
+  });
+  new Chart(document.getElementById('ch-smod'),{type:'doughnut',
+    data:{labels:['Audiencia Debate','Juicio Abreviado','Conciliatorio'],datasets:[{data:[414,223,7],backgroundColor:[C.az,C.cel,'#B8D9F0'],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom'}}}
+  });
+  new Chart(document.getElementById('ch-agrav'),{type:'bar',
+    data:{labels:['Otros Agravantes','Vulnerabilidad','Engaño','Pluralidad Víct.','Consumación'],
+      datasets:[{data:[491,488,195,148,141],backgroundColor:[C.na,C.ro,C.azm,C.mo,C.ve],borderRadius:5,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+  });
+  new Chart(document.getElementById('ch-vered'),{type:'doughnut',
+    data:{labels:['Condenatorio','Absolutorio','Conciliatorio'],datasets:[{data:[537,100,7],backgroundColor:[C.ve,C.ro,'#74ACDF'],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom'}}}
+  });
+  new Chart(document.getElementById('ch-efic'),{type:'radar',
+    data:{labels:['Sexual','Laboral','Búsqueda','Captación','Otros'],
+      datasets:[{label:'% Investigado/Denunciado',data:[27,29,4,0,18],backgroundColor:'rgba(0,114,187,.12)',borderColor:C.azm},{label:'% Víctimas/Investigado',data:[84,81,0,0,2],backgroundColor:'rgba(192,57,43,.1)',borderColor:C.ro}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},scales:{r:{ticks:{display:false}}}}
+  });
+
+  // VICTIMAS
+  new Chart(document.getElementById('ch-vt2'),{type:'bar',
+    data:{labels:['Sexual','Laboral','Mixto','Otros'],datasets:[{data:[1755,853,4,9],backgroundColor:[C.ro,C.na,C.mo,C.gr],borderRadius:8,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'}}}}
+  });
+  new Chart(document.getElementById('ch-vg'),{type:'doughnut',
+    data:{labels:['Femenino','Masculino','Trans','Sin Esp.'],datasets:[{data:[1910,475,11,225],backgroundColor:[C.ro,C.azm,'#9B59B6',C.gr],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:12}}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw.toLocaleString('es-AR')} (${Math.round(ctx.raw/2621*100)}%)`}}}}
+  });
+  new Chart(document.getElementById('ch-cg'),{type:'doughnut',
+    data:{labels:['Masculino','Femenino','Trans','S/D'],datasets:[{data:[619,346,5,8],backgroundColor:[C.azm,C.ro,'#9B59B6',C.gr],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:12}}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw.toLocaleString('es-AR')} (${Math.round(ctx.raw/978*100)}%)`}}}}
+  });
+  new Chart(document.getElementById('ch-cn'),{type:'doughnut',
+    data:{labels:['Argentina','Extranjera','S/D'],datasets:[{data:[757,207,14],backgroundColor:[C.az,C.na,C.gr],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:12}}}}}
+  });
+
+  // FUERZAS
+  new Chart(document.getElementById('ch-fd'),{type:'doughnut',
+    data:{labels:['PFA — Pol. Federal','GNA — Gendarmería','PSA — Aeroportuaria','PNA — Prefectura','Provinciales'],datasets:[{data:[1643,1009,394,390,100],backgroundColor:[C.az,C.ve,C.na,C.cel,C.gr],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'right',labels:{font:{size:11}}},tooltip:{callbacks:{label:ctx=>` ${ctx.raw.toLocaleString('es-AR')} tareas (${Math.round(ctx.raw/3536*100)}%)`}}}}
+  });
+  new Chart(document.getElementById('ch-ft'),{type:'bar',
+    data:{labels:['Sexual','Laboral','Sin Det.','Otros'],datasets:[{data:[2042,1050,384,60],backgroundColor:[C.ro,C.na,C.gr,C.mo],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'}}}}
+  });
+  new Chart(document.getElementById('ch-freg'),{type:'bar',
+    data:{labels:['Buenos Aires (Pcia.)','CABA','Otras Regiones'],datasets:[{data:[1225,1208,1103],backgroundColor:[C.azm,C.az,C.cel],borderRadius:8,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'}}}}
+  });
+  new Chart(document.getElementById('ch-imp'),{type:'bar',
+    data:{labels:['Masc. Cis','Fem. Cis','Sin Det.','Argentina','Extranjera'],datasets:[{data:[83,37,2,79,43],backgroundColor:[C.azm,C.ro,C.gr,C.az,C.na],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f0f0'}}}}
+  });
+
+  // LABORAL
+  new Chart(document.getElementById('ch-lab-prov'),{type:'bar',
+    data:{labels:['Córdoba','Bs. As.','Mendoza','Stgo. Est.','Corrientes','Santa Fe','Entre Ríos','Formosa','La Rioja','Misiones','Catamarca','Chaco','San Luis','La Pampa','Neuquén','Jujuy','Chubut','Santa Cruz','Tucumán'],
+      datasets:[{label:'Actas IELR',data:[239,118,104,83,77,43,37,21,19,15,11,10,7,5,5,3,1,1,1],
+        backgroundColor:d=>d.dataset.data.map(v=>v>=100?'#003B79':v>=50?'#0072BB':v>=20?'#74ACDF':'#B8D9F0'),borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  new Chart(document.getElementById('ch-lab-rub'),{type:'bar',
+    data:{labels:['Tambo','Hortícola','Ganadera','Papa Cosecha','Desmonte','Forestal-Resina','Avícola','Agrícola','Frutilla','Papa Cultivo'],
+      datasets:[{data:[145,117,87,50,40,31,30,26,25,24],backgroundColor:['#003B79','#0A5F9E','#0072BB','#1A88CC','#3099D0','#5AABDA','#74ACDF','#8DBDE8','#A8CEEF','#C8E5F5'],borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  new Chart(document.getElementById('ch-lab-local'),{type:'bar',
+    data:{labels:['Bouwer CBA','Ticino CBA','Malargüe MDZ','Barrancas SF','Ituzaingó COR','Zárate BA','Tintina SDE','San José CBA','Abasto BA','Tres Porteñas MDZ'],
+      datasets:[{data:[42,35,35,33,31,28,25,24,22,21],backgroundColor:C.azm,borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}
+  });
+  new Chart(document.getElementById('ch-lab-cruce'),{type:'bar',
+    data:{labels:['CBA — Tambo','CBA — Papa Cosecha','BA — Hortícola','MDZ — Hortícola','SF — Hortícola','SDE — Desmonte','COR — Resina','ER — Ganadera','BA — Frutilla','LR — Vid/Olivo'],
+      datasets:[{data:[123,50,42,42,33,32,31,26,25,16],backgroundColor:'rgba(0,114,187,.75)',borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+}
+
+/* ══════ KPI ANIMATION ══════ */
+function animateKPIs(){
+  document.querySelectorAll('[data-count]').forEach(el=>{
+    const t=parseInt(el.dataset.count);
+    if(isNaN(t)) return;
+    let c=0;const d=1300,s=16,inc=t/(d/s);
+    const tm=setInterval(()=>{c=Math.min(c+inc,t);el.textContent=Math.floor(c).toLocaleString('es-AR');if(c>=t)clearInterval(tm);},s);
+  });
+}
+
+/* ══════ INIT ══════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  animateKPIs();
+  const startCharts = ()=>{ if(window.Chart){ initCharts(); } };
+  if(window.Chart){ startCharts(); }
+  else { setTimeout(startCharts, 1200); }
+});
+// Init resumen map after full load so container has real dimensions
+window.addEventListener('load', ()=>{
+  const startMap = ()=>{ if(window.L){ setTimeout(initMapResumen, 100); } };
+  if(window.L){ startMap(); }
+  else { setTimeout(startMap, 1200); }
+});
+</script>
+</body>
+</html>
